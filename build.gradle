@@ -1,0 +1,41 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.commons:commons-csv:1.14.1'
+    implementation 'com.google.code.gson:gson:2.14.0'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+application {
+    mainClass = 'skyview.SkyviewDriver'
+}
+
+tasks.named('run') {
+    standardInput = System.in
+}
+
+tasks.register('checkSetup', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'skyview.SetupCheckDriver'
+    enableAssertions = true
+}
+
+tasks.named('check') {
+    dependsOn checkSetup
+}
+
+// This project uses a runnable assertion check instead of a test framework.
+tasks.named('test') {
+    enabled = false
+}

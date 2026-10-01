@@ -1,0 +1,104 @@
+[
+  {
+    "max": 0.33,
+    "mean": 0.3,
+    "min": 0.257,
+    "catalogs_linear": {
+      "brewer16_01_of_02_unique_01_01_2025": 1.9498445997580451,
+      "gonzalez10b_01_of_02_unique_01_01_2025": 1.807174126010927,
+      "maldonado15_raw_01_01_2025": 1.9952623149688795,
+      "maldonado18_raw_01_01_2025": 2.137962089502232
+    },
+    "std": -0.928,
+    "plusminus": 0.04,
+    "name": "HD  50499",
+    "median_value": 0.3,
+    "all_names": [
+      "GSC 07096-00565",
+      "GC  9010",
+      "SKY# 12155",
+      "2MASS J06520202-3354559",
+      "CPD-33  1302",
+      "Gaia DR1 5579783569778334464",
+      "Gaia DR2 5579783574073770112",
+      "TIC 53175558",
+      "SAO 197294",
+      "uvby98 100050499",
+      "SPOCS  325",
+      "HIP 32970",
+      "TYC 7096-565-1",
+      "HIC  32970",
+      "HD  50499",
+      "GEN# +1.00050499",
+      "CPC 17  3013",
+      "Gaia DR3 5579783574073770112",
+      "PPM 283214",
+      "CD-33  3304"
+    ],
+    "nea_name": "HD 50499",
+    "solarnorm": "asplund09",
+    "element": "Ca",
+    "all_values": [
+      {
+        "value": 0.29,
+        "catalog": {
+          "author": "Brewer et al. (2016)",
+          "year": 2016,
+          "id": "brewer16_01_of_02_unique_01_01_2025",
+          "original_norm_id": "grevesse07"
+        }
+      },
+      {
+        "value": 0.257,
+        "catalog": {
+          "author": "Gonzalez et al. (2010b)",
+          "year": 2010,
+          "id": "gonzalez10b_01_of_02_unique_01_01_2025",
+          "original_norm_id": "asplund09"
+        }
+      },
+      {
+        "value": 0.3,
+        "catalog": {
+          "author": "Maldonado et al. (2015)",
+          "year": 2015,
+          "id": "maldonado15_raw_01_01_2025",
+          "original_norm_id": "maldonado15"
+        }
+      },
+      {
+        "value": 0.33,
+        "catalog": {
+          "author": "Maldonado et al. (2018)",
+          "year": 2018,
+          "id": "maldonado18_raw_01_01_2025",
+          "original_norm_id": "maldonado15"
+        }
+      }
+    ],
+    "median": [
+      {
+        "value": 0.29,
+        "catalog": {
+          "author": "Brewer et al. (2016)",
+          "year": 2016,
+          "id": "brewer16_01_of_02_unique_01_01_2025",
+          "original_norm_id": "grevesse07"
+        }
+      },
+      {
+        "value": 0.3,
+        "catalog": {
+          "author": "Maldonado et al. (2015)",
+          "year": 2015,
+          "id": "maldonado15_raw_01_01_2025",
+          "original_norm_id": "maldonado15"
+        }
+      }
+    ],
+    "match_name": "hip32970",
+    "requested_name": "HIP32970",
+    "requested_element": "ca",
+    "requested_solarnorm": "asplund09"
+  }
+]
