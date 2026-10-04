@@ -4,11 +4,13 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven { url = 'https://artifacts.unidata.ucar.edu/repository/unidata-all/' }
 }
 
 dependencies {
     implementation 'org.apache.commons:commons-csv:1.14.1'
     implementation 'com.google.code.gson:gson:2.14.0'
+    implementation 'org.skyview:goes-cloud-parser:0.1.0'
 }
 
 tasks.withType(JavaCompile).configureEach {

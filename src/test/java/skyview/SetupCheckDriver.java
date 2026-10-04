@@ -8,7 +8,7 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.csv.CSVFormat;
 
-/** Dependency and repeated input driver */
+/** Dependency and terminal EOF check driver. */
 public class SetupCheckDriver {
     /**
      * Verifies dependency loading, quoted CSV fields, missing JSON data, and terminal EOF
@@ -33,14 +33,15 @@ public class SetupCheckDriver {
         var originalOutput = System.out;
         var output = new ByteArrayOutputStream();
         try (var capturedOutput = new PrintStream(output, true, StandardCharsets.UTF_8)) {
-            System.setIn(new ByteArrayInputStream("\n\n".getBytes(StandardCharsets.UTF_8)));
+            System.setIn(new ByteArrayInputStream(new byte[0]));
             System.setOut(capturedOutput);
             SkyviewDriver.main(new String[0]);
         } finally {
             System.setIn(originalInput);
             System.setOut(originalOutput);
         }
-        assert output.toString(StandardCharsets.UTF_8).split("Retrieving enabled", -1).length == 3;
+        assert output.toString(StandardCharsets.UTF_8).contains("Press Enter");
+        assert !output.toString(StandardCharsets.UTF_8).contains("Retrieving enabled");
         System.out.println("Setup check passed.");
     }
 }

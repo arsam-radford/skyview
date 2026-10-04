@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import org.skyview.goes.CloudCell;
 
 /** Coordinates the independent source demonstrations */
 public class SkyviewApplication {
@@ -23,6 +24,7 @@ public class SkyviewApplication {
     private final HygCatalog starCatalog = new HygCatalog();
     private final HorizonsClient horizonsClient = new HorizonsClient();
     private final HypatiaClient hypatiaClient = new HypatiaClient();
+    private final GoesClient goesClient = new GoesClient();
 
     /**
      * Calls each enabled source; uncomment your section while implementing it.
@@ -34,7 +36,28 @@ public class SkyviewApplication {
         // retrieveStars();
         // retrieveSolarSystem();
         // retrieveComposition();
-        // GOES acquisition and decoding will be integrated by Arsam separately
+        retrieveCloudMask();
+    }
+
+    /**
+     * Displays geographic cloud conditions and actual scan times for the demo location.
+     * @throws InterruptedException if acquisition is interrupted
+     */
+    private void retrieveCloudMask() throws InterruptedException {
+        try {
+            var mask = goesClient.fetchLatestCloudMask();
+            CloudCell cell = mask.getCellAt(DEMO_OBSERVER.getLatitudeDegrees(), DEMO_OBSERVER.getLongitudeDegrees());
+            System.out.printf("GOES-19: scan %s to %s UTC, grid %s x %s%n",
+                    mask.getScanStart(), mask.getScanEnd(), mask.getColumnCount(), mask.getRowCount());
+            System.out.printf("Radford geographic cloud state: %s; DQF: %s%n", cell.getState(), cell.getQualityCode());
+            if (cell.getCloudProbability() == null) {
+                System.out.println("Cloud probability: unknown");
+            } else {
+                System.out.printf("Cloud probability: %.3f (0 to 1)%n", cell.getCloudProbability());
+            }
+        } catch (IOException | IllegalArgumentException exception) {
+            System.out.println("GOES: " + exception.getMessage());
+        }
     }
 
     /** Displays the stars returned by the local catalog reader. */
