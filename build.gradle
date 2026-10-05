@@ -31,6 +31,21 @@ tasks.register('checkSetup', JavaExec) {
     enableAssertions = true
 }
 
+/* Commands 
+./gradlew parserCheck
+./gradlew check
+ */
+tasks.register('parserCheck', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'skyview.HorizonsParserCheck'
+    enableAssertions = true
+}
+
+tasks.named('check') {
+    dependsOn parserCheck
+}
+
 tasks.named('check') {
     dependsOn checkSetup
 }

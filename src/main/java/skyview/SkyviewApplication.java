@@ -32,7 +32,7 @@ public class SkyviewApplication {
     public void retrieveData() throws InterruptedException {
         System.out.println("Retrieving enabled sections; enable calls in SkyviewApplication.");
         // retrieveStars();
-        // retrieveSolarSystem();
+        retrieveSolarSystem();
         // retrieveComposition();
         // GOES acquisition and decoding will be integrated by Arsam separately
     }
