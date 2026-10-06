@@ -32,11 +32,15 @@ public class SkyviewApplication {
      * @throws InterruptedException if an enabled request is interrupted
      */
     public void retrieveData() throws InterruptedException {
-        System.out.println("Retrieving enabled sections; enable calls in SkyviewApplication.");
+        System.out.printf("%nRetrieval started: %s (UTC)%n", Instant.now());
+        System.out.printf("Radford observer: %.2f deg latitude, %.2f deg longitude, %.0f m elevation%n",
+                DEMO_OBSERVER.getLatitudeDegrees(), DEMO_OBSERVER.getLongitudeDegrees(), DEMO_OBSERVER.getElevationMeters());
+
         // retrieveStars();
         retrieveSolarSystem();
         // retrieveComposition();
         retrieveCloudMask();
+        System.out.println("\nRetrieval finished. Press Enter to fetch again.");
     }
 
     /**
@@ -44,11 +48,13 @@ public class SkyviewApplication {
      * @throws InterruptedException if acquisition is interrupted
      */
     private void retrieveCloudMask() throws InterruptedException {
+        System.out.println("\nNOAA GOES-19: downloading the latest CONUS cloud mask...");
         try {
             var mask = goesClient.fetchLatestCloudMask();
             CloudCell cell = mask.getCellAt(DEMO_OBSERVER.getLatitudeDegrees(), DEMO_OBSERVER.getLongitudeDegrees());
             System.out.printf("GOES-19: scan %s to %s UTC, grid %s x %s%n",
                     mask.getScanStart(), mask.getScanEnd(), mask.getColumnCount(), mask.getRowCount());
+            System.out.printf("Scan age: %d min.%n", Duration.between(mask.getScanEnd(), Instant.now()).toMinutes());
             System.out.printf("Radford geographic cloud state: %s; DQF: %s%n", cell.getState(), cell.getQualityCode());
             if (cell.getCloudProbability() == null) {
                 System.out.println("Cloud probability: unknown");
@@ -80,14 +86,19 @@ public class SkyviewApplication {
      */
     private void retrieveSolarSystem() throws InterruptedException {
         Instant start = Instant.now();
+        System.out.printf("%nJPL Horizons: requesting Moon positions for the next %d minutes...%n", SAMPLE_WINDOW.toMinutes());
         try {
-            for (PositionSample sample : horizonsClient.fetchPositions(MOON_ID, DEMO_OBSERVER, start, start.plus(SAMPLE_WINDOW), SAMPLE_INTERVAL)) {
+            var samples = horizonsClient.fetchPositions(MOON_ID, DEMO_OBSERVER, start, start.plus(SAMPLE_WINDOW), SAMPLE_INTERVAL);
+            System.out.printf("Received %d calculated positions. Azimuth: north = 0 deg, east = 90 deg.%n", samples.size());
 
+            for (PositionSample sample : samples) {
+                String horizon = "above horizon";
+                if (sample.getAltitudeDegrees() < 0.0) {
+                    horizon = "below horizon";
+                }
 
-                System.out.printf("%s at %s: azimuth %s deg, altitude %s deg%n",
-                        sample.getBodyId(), sample.getTime(),
-                        sample.getAzimuthDegrees(), sample.getAltitudeDegrees());
-
+                System.out.printf("Moon at %s (UTC): azimuth %.2f deg, altitude %+.2f deg (%s)%n",
+                        sample.getTime(), sample.getAzimuthDegrees(), sample.getAltitudeDegrees(), horizon);
             }
         } catch (IOException | IllegalArgumentException exception) {
             System.out.println("Horizons: " + exception.getMessage());

@@ -23,6 +23,9 @@ public class HorizonsParserCheck {
                 StandardCharsets.UTF_8);
 
         checkSavedResponse(savedJson);
+        String abbreviatedJson = savedJson.replace("Azimuth_(a-app)", "Azi_(a-app)")
+                .replace("Elevation_(a-app)", "Elev_(a-app)");
+        checkSavedResponse(abbreviatedJson);
         checkMissingOptionalValues(savedJson);
         checkMalformedMarkers(savedJson);
         checkMalformedRequiredValue(savedJson);

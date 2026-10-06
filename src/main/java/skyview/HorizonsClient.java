@@ -116,7 +116,7 @@ public class HorizonsClient {
             return parseJsonResponse(bodyId, responseBody);
         } catch (IOException exception) {
             throw new IOException(
-                    "Horizons response parsing failed for body " + bodyId + ".",
+                    "Horizons response parsing failed for body " + bodyId + ": " + exception.getMessage(),
                     exception);
         }
     }
@@ -372,8 +372,8 @@ public class HorizonsClient {
 
         for (String line : lines) {
             if (line.contains(requiredTimeHeader)
-                    && line.contains(requiredAzimuthHeader)
-                    && line.contains(requiredAltitudeHeader)
+                    && (line.contains(requiredAzimuthHeader) || line.contains("Azi_(a-app)"))
+                    && (line.contains(requiredAltitudeHeader) || line.contains("Elev_(a-app)"))
                     && line.contains("APmag")
                     && line.contains("Illu%")) {
                 return line;
@@ -390,7 +390,13 @@ public class HorizonsClient {
             throws IOException {
 
         for (int index = 0; index < header.size(); index++) {
-            if (expected.equals(header.get(index).trim())) {
+            String label = header.get(index).trim();
+            // Horizons can return abbreviated position labels.
+            boolean matches = expected.equals(label)
+                    || (expected.equals("Azimuth_(a-app)") && label.equals("Azi_(a-app)"))
+                    || (expected.equals("Elevation_(a-app)") && label.equals("Elev_(a-app)"));
+
+            if (matches) {
                 return index;
             }
         }

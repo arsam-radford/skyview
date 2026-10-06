@@ -12,7 +12,9 @@ public class SkyviewDriver {
     public static void main(String[] args) {
         SkyviewApplication application = new SkyviewApplication();
         try (Scanner input = new Scanner(System.in)) {
-            System.out.println("Press Enter to retrieve enabled data. Ctrl+C to exit.");
+            System.out.println("Skyview - live data demo");
+            System.out.println("JPL Horizons: current Moon positions | NOAA GOES-19: latest cloud scan");
+            System.out.println("Press Enter to fetch data for Radford. Ctrl+C to exit.");
             System.out.print("> ");
             while (input.hasNextLine()) {
                 input.nextLine();
