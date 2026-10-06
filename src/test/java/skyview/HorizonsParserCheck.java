@@ -26,6 +26,11 @@ public class HorizonsParserCheck {
         String abbreviatedJson = savedJson.replace("Azimuth_(a-app)", "Azi_(a-app)")
                 .replace("Elevation_(a-app)", "Elev_(a-app)");
         checkSavedResponse(abbreviatedJson);
+        String minuteJson = abbreviatedJson.replace("Date__(UT)__HR:MN:SS", "Date__(UT)__HR:MN")
+                .replace("2026-Oct-01 00:00:00", "2026-Oct-01 00:00")
+                .replace("2026-Oct-01 00:05:00", "2026-Oct-01 00:05")
+                .replace("2026-Oct-01 00:10:00", "2026-Oct-01 00:10");
+        checkSavedResponse(minuteJson);
         checkMissingOptionalValues(savedJson);
         checkMalformedMarkers(savedJson);
         checkMalformedRequiredValue(savedJson);

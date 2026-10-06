@@ -35,7 +35,7 @@ public class HorizonsClient {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
     private static final DateTimeFormatter HORIZONS_TIME_FORMAT =
-            DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm:ss", Locale.ENGLISH)
+            DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm[:ss]", Locale.ENGLISH)
                     .withResolverStyle(ResolverStyle.STRICT);
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
@@ -366,7 +366,7 @@ public class HorizonsClient {
 
         String[] lines = precedingText.split("\\R", -1);
 
-        String requiredTimeHeader = "Date__(UT)__HR:MN:SS";
+        String requiredTimeHeader = "Date__(UT)__HR:MN";
         String requiredAzimuthHeader = "Azimuth_(a-app)";
         String requiredAltitudeHeader = "Elevation_(a-app)";
 
@@ -391,8 +391,9 @@ public class HorizonsClient {
 
         for (int index = 0; index < header.size(); index++) {
             String label = header.get(index).trim();
-            // Horizons can return abbreviated position labels.
+            // Horizons may omit seconds and abbreviate position labels.
             boolean matches = expected.equals(label)
+                    || (expected.equals("Date__(UT)__HR:MN:SS") && label.equals("Date__(UT)__HR:MN"))
                     || (expected.equals("Azimuth_(a-app)") && label.equals("Azi_(a-app)"))
                     || (expected.equals("Elevation_(a-app)") && label.equals("Elev_(a-app)"));
 
