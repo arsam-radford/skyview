@@ -24,8 +24,17 @@ public class HygCatalog {
      */
     public List<Star> loadStars(Path csvFile, double magnitudeLimit) throws IOException, IllegalArgumentException {
         // TODO: Implement the HYG issue using Commons CSV and the shared Star class.
-        magnitudeLimit = 6.5;
+        Files.newBufferedReader(csvFile, StandardCharsets.UTF_8);
         Reader in = new FileReader("csvFile");
+        if (StandardCharsets.UTF_8 == null) {
+    throw new IllegalArgumentException("csvFile cannot be null"); // checks if csvFile is null
+    }
+    if (Double.isNaN(magnitudeLimit)) {
+    throw new IllegalArgumentException("magnitudeLimit cannot be NaN"); // checks if magnitudeLimit is NaN
+    }
+    if (Double.isInfinite(magnitudeLimit)) {
+    throw new IllegalArgumentException("magnitudeLimit cannot be infinite"); // checks if magnitudeLimit is infinite
+    }
 CSVFormat format = CSVFormat.RFC4180.builder()
 .setHeader()
 .get();
@@ -42,7 +51,24 @@ for (CSVRecord record : parser) {
         double colorIndex = Double.parseDouble(record.get("ci"));
         if (hygId == 0) continue;
         if (apparentMagnitude > magnitudeLimit) continue;
-}
         throw new IOException("HYG reader not implemented yet.");
+    // process one row
+    String idStr = record.get("id");
+    String raStr = record.get("ra");
+    String decStr = record.get("dec");
+    String magStr = record.get("mag");
+    if (magStr ==null || magStr.isBlank()) {
+    continue; // skip this record if magStr is null or blank    
+
+    Double mag = Double.parseDouble(magStr);
+    if (mag > magnitudeLimit) {
+    continue; // skip this record if mag is greater than magnitudeLimit
     }
+    int Id = Integer.parseInt(idStr);
+    if (Id == 0) {
+    continue; // skip this record if Id is 0
+    }
+        }
+    }
+}
 }
