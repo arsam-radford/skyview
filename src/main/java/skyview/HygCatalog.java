@@ -1,17 +1,19 @@
 package skyview;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.nio.file.Files;
-import java.nio.charset.StandardCharsets;
-import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-/** Reads the local HYG v4.1 CSV using Apache Commons CSV. */
+/**
+ * Reads the local HYG v4.1 CSV using Apache Commons CSV.
+ * AI assistance: OpenAI Codex helped repair the merge and reader setup.
+ */
 public class HygCatalog {
     /**
      * Loads stars whose visual magnitude is at most the inclusive limit.
@@ -22,88 +24,62 @@ public class HygCatalog {
      * @throws IOException if the file cannot be read or required data is malformed
      * @throws IllegalArgumentException if an argument is null or invalid
      */
-    public List<Star> loadStars(Path csvFile, double magnitudeLimit) throws IOException, IllegalArgumentException {
-        // TODO: Implement the HYG issue using Commons CSV and the shared Star class.
-        Files.newBufferedReader(csvFile, StandardCharsets.UTF_8);
-        Reader in = new FileReader("csvFile");
-<<<<<<< HEAD
-        if (StandardCharsets.UTF_8 == null) {
-=======
-    
-    
-    // Validate arguments
-    if (csvFile == null) {
->>>>>>> 628c3841f6aab1a9fe81bd28ea73fbb4c8a23143
-    throw new IllegalArgumentException("csvFile cannot be null"); // checks if csvFile is null
-    }
-    if (Double.isNaN(magnitudeLimit)) {
-    throw new IllegalArgumentException("magnitudeLimit cannot be NaN"); // checks if magnitudeLimit is NaN
-    }
-    if (Double.isInfinite(magnitudeLimit)) {
-    throw new IllegalArgumentException("magnitudeLimit cannot be infinite"); // checks if magnitudeLimit is infinite
-    }
-CSVFormat format = CSVFormat.RFC4180.builder()
-.setHeader()
-.get();
-CSVParser parser = format.parse(in);
-for (CSVRecord record : parser) {
-    // some random bullshit?
-        int hygId = Integer.parseInt(record.get("id"));
-        Integer hipId = Integer.parseInt(record.get("hip"));
-        Integer hdId = Integer.parseInt(record.get("hd"));
-        String displayName = record.get("proper");
-        double rightAscensionHours = Double.parseDouble(record.get("ra"));
-        double declinationDegrees = Double.parseDouble(record.get("dec"));
-        double apparentMagnitude = Double.parseDouble(record.get("mag"));
-        String spectralClass = record.get("spect");
-        double colorIndex = Double.parseDouble(record.get("ci"));
-        if (hygId == 0) continue;
-        if (apparentMagnitude > magnitudeLimit) continue;
-        throw new IOException("HYG reader not implemented yet.");
-    // process one row
-    String idStr = record.get("id");
-    String raStr = record.get("ra");
-    String decStr = record.get("dec");
-    String magStr = record.get("mag");
-    if (magStr ==null || magStr.isBlank()) {
-    continue; // skip this record if magStr is null or blank    
+    public List<Star> loadStars(Path csvFile, double magnitudeLimit) throws IOException {
+        validateArguments(csvFile, magnitudeLimit);
 
-    Double mag = Double.parseDouble(magStr);
-    if (mag > magnitudeLimit) {
-    continue; // skip this record if mag is greater than magnitudeLimit
+        CSVFormat format = CSVFormat.RFC4180.builder()
+                .setHeader()
+                .get();
+
+        try (Reader in = Files.newBufferedReader(csvFile, StandardCharsets.UTF_8);
+                CSVParser parser = format.parse(in)) {
+            for (CSVRecord record : parser) {
+                readRecord(record, magnitudeLimit);
+            }
+        }
+
+        // TODO: Collect and return Star objects once the row mapping is finished.
+        throw new IOException("HYG reader not implemented yet.");
     }
-    int Id = Integer.parseInt(idStr);
-    if (Id == 0) {
-    continue; // skip this record if Id is 0
-    }
+
+    /** Validates caller arguments before opening the catalog. */
+    private void validateArguments(Path csvFile, double magnitudeLimit) {
+        if (csvFile == null) {
+            throw new IllegalArgumentException("csvFile cannot be null");
+        }
+
+        if (Double.isNaN(magnitudeLimit)) {
+            throw new IllegalArgumentException("magnitudeLimit cannot be NaN");
+        }
+
+        if (Double.isInfinite(magnitudeLimit)) {
+            throw new IllegalArgumentException("magnitudeLimit cannot be infinite");
         }
     }
-    
 
+    /** Keeps the existing field conversion together for rows that pass the brightness filter. */
+    private void readRecord(CSVRecord record, double magnitudeLimit) {
+        String magStr = record.get("mag");
 
-    for (CSVRecord record : parser) {
-    // process one row
-    String idStr = record.get("id");
-    String raStr = record.get("ra");
-    String decStr = record.get("dec");
-    String magStr = record.get("mag");
+        if (!magStr.isBlank()) {
+            double apparentMagnitude = Double.parseDouble(magStr);
+
+            if (apparentMagnitude <= magnitudeLimit) {
+                int hygId = Integer.parseInt(record.get("id"));
+
+                if (hygId != 0) {
+                    Integer hipId = Integer.parseInt(record.get("hip"));
+                    Integer hdId = Integer.parseInt(record.get("hd"));
+                    String displayName = record.get("proper");
+                    double rightAscensionHours = Double.parseDouble(record.get("ra"));
+                    double declinationDegrees = Double.parseDouble(record.get("dec"));
+                    String spectralClass = record.get("spect");
+                    double colorIndex = Double.parseDouble(record.get("ci"));
+
+                    // TODO: Handle blank optional fields, name fallback, and the issue's validation.
+                    // TODO: Use these values to construct a Star and add it to the returned list.
+                }
+            }
+        }
     }
-    if (magStr ==null || magStr.isBlank()) {
-    continue; // skip this record if magStr is null or blank    
-
-    Double mag = Double.parseDouble(magStr);
-    if (mag > magnitudeLimit) {
-    continue; // skip this record if mag is greater than magnitudeLimit
-    
-    int hygId = Integer.parseInt(idStr);
-    hygId = 0;
-    continue; // skip this record if hygId is 0
-
-
-}
-
-    
-}
-
-}
 }
