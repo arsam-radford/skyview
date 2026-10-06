@@ -7,9 +7,11 @@ Java 17+ and a small Gradle build. To build and run:
 ./gradlew check
 ```
 
-On Windows use `gradlew.bat`. Press Enter to fetch current Moon positions from JPL Horizons and the latest GOES-19 cloud mask for Radford. Ctrl+C exits. The terminal shows UTC position times and the cloud scan's actual observation times and age.
+On Windows use `gradlew.bat`. Press Enter to fetch current Moon positions from JPL Horizons and the latest GOES-19 cloud mask and cloud-top height near Radford. Ctrl+C exits. The terminal shows UTC position times and each cloud product's actual observation times and age.
 
 HYG and Hypatia remain unimplemented and disabled for this retrieval demo. Horizons returns calculated positions; GOES returns satellite observations of geographic cloud coverage.
+
+Cloud-top height uses its own grid and quality flags. Only good-quality heights are shown, in metres above sea level; unavailable values remain unknown. The location lookup uses the satellite grid without cloud parallax correction. Height is an estimate of the cloud top, rather than a cloud base or full 3D volume. [NOAA cloud-top documentation](https://www.ncei.noaa.gov/sites/default/files/2024-12/GOES-19_ABI_L2_Cloud_Top_Parameters_Beta_ReadMe.pdf).
 
 
 **Failure contract:**

@@ -13,7 +13,7 @@ public class SkyviewDriver {
         SkyviewApplication application = new SkyviewApplication();
         try (Scanner input = new Scanner(System.in)) {
             System.out.println("Skyview - live data demo");
-            System.out.println("JPL Horizons: current Moon positions | NOAA GOES-19: latest cloud scan");
+            System.out.println("JPL Horizons: current Moon positions | NOAA GOES-19: cloud mask and cloud-top height");
             System.out.println("Press Enter to fetch data for Radford. Ctrl+C to exit.");
             System.out.print("> ");
             while (input.hasNextLine()) {

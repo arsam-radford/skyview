@@ -40,7 +40,32 @@ public class SkyviewApplication {
         retrieveSolarSystem();
         // retrieveComposition();
         retrieveCloudMask();
+        retrieveCloudTopHeight();
         System.out.println("\nRetrieval finished. Press Enter to fetch again.");
+    }
+
+    /**
+     * Displays available cloud-top geopotential height near Radford.
+     * @throws InterruptedException if acquisition is interrupted
+     */
+    private void retrieveCloudTopHeight() throws InterruptedException {
+        System.out.println("\nNOAA GOES-19: downloading the latest CONUS cloud-top heights...");
+        try {
+            var heights = goesClient.fetchLatestCloudTopHeight();
+            var cell = heights.getCellAt(DEMO_OBSERVER.getLatitudeDegrees(), DEMO_OBSERVER.getLongitudeDegrees());
+            System.out.printf("Height scan %s to %s UTC, grid %s x %s%n",
+                    heights.getScanStart(), heights.getScanEnd(), heights.getColumnCount(), heights.getRowCount());
+            System.out.printf("Scan age: %d min; height DQF: %s%n",
+                    Duration.between(heights.getScanEnd(), Instant.now()).toMinutes(), cell.getQualityCode());
+
+            if (cell.getHeightMeters() == null) {
+                System.out.println("Cloud-top height near Radford: unavailable (no good-quality retrieval).");
+            } else {
+                System.out.printf("Cloud-top geopotential height near Radford: %.0f m above sea level.%n", cell.getHeightMeters());
+            }
+        } catch (IOException | IllegalArgumentException exception) {
+            System.out.println("GOES height: " + exception.getMessage());
+        }
     }
 
     /**

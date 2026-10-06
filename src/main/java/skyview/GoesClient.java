@@ -20,13 +20,14 @@ import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.skyview.goes.CloudMask;
+import org.skyview.goes.CloudTopHeight;
 import org.skyview.goes.GoesCloudMaskParser;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 /**
- * finds and downloads NOAA's latest available GOES-19 CONUS mask
+ * Finds and downloads NOAA's latest available GOES-19 CONUS cloud products.
  * Sources: <a href="https://noaa-goes19.s3.amazonaws.com/">NOAA public bucket</a>,
  * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html">S3 listings</a>,
  * and <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpClient.html">JDK HttpClient</a>
@@ -38,7 +39,9 @@ public class GoesClient {
     private static final int SUCCESS_STATUS = 200;
     private static final int SEARCH_HOURS = 3;
     private static final DateTimeFormatter HOUR_PATH = DateTimeFormatter.ofPattern("uuuu/DDD/HH").withZone(ZoneOffset.UTC);
-    private static final String FILE_PATTERN = "OR_ABI-L2-ACMC-M[36]_G19_s[0-9]{14}_e[0-9]{14}_c[0-9]{14}\\.nc";
+    private static final String MASK_PRODUCT = "ABI-L2-ACMC";
+    private static final String HEIGHT_PRODUCT = "ABI-L2-ACHAC";
+    private static final String FILE_SUFFIX_PATTERN = "-M[36]_G19_s[0-9]{14}_e[0-9]{14}_c[0-9]{14}\\.nc";
 
     private final HttpClient httpClient;
     private final URI bucket;
@@ -64,33 +67,52 @@ public class GoesClient {
      */
     public CloudMask fetchLatestCloudMask() throws IOException, InterruptedException {
         try {
-            return downloadMask(findLatestKey());
+            return downloadMask(findLatestKey(MASK_PRODUCT));
         } catch (IOException exception) {
             throw new IOException("GOES acquisition: " + exception.getMessage(), exception);
         }
     }
 
+    /**
+     * Retrieves the newest available cloud-top height grid independently of the cloud mask.
+     * @return geopotential heights with their own grid, quality flags, and scan times
+     * @throws IOException if discovery, download, or parsing fails
+     * @throws InterruptedException if acquisition is interrupted
+     */
+    public CloudTopHeight fetchLatestCloudTopHeight() throws IOException, InterruptedException {
+        try {
+            Path file = downloadFile(findLatestKey(HEIGHT_PRODUCT));
+            try {
+                return parser.parseCloudTopHeight(file);
+            } finally {
+                Files.deleteIfExists(file);
+            }
+        } catch (IOException exception) {
+            throw new IOException("GOES height acquisition: " + exception.getMessage(), exception);
+        }
+    }
+
     /** checks the previous hour/day when the current hour has no published scan */
-    private String findLatestKey() throws IOException, InterruptedException {
+    private String findLatestKey(String product) throws IOException, InterruptedException {
         Instant hour = Instant.now(clock).truncatedTo(ChronoUnit.HOURS);
         String key = null;
         int offset = 0;
 
         while (key == null && offset < SEARCH_HOURS) {
-            String prefix = "ABI-L2-ACMC/" + HOUR_PATH.format(hour.minus(offset, ChronoUnit.HOURS)) + "/";
-            key = latestKeyInHour(prefix);
+            String prefix = product + "/" + HOUR_PATH.format(hour.minus(offset, ChronoUnit.HOURS)) + "/";
+            key = latestKeyInHour(prefix, product);
             offset++;
         }
 
         if (key == null) {
-            throw new IOException("No GOES-19 CONUS cloud mask in the last " + SEARCH_HOURS + " UTC hours.");
+            throw new IOException("No GOES-19 " + product + " in the last " + SEARCH_HOURS + " UTC hours.");
         }
 
         return key;
     }
 
     /** retrieves one hour listing, a normal CONUS hour contains only about twelve scans */
-    private String latestKeyInHour(String prefix) throws IOException, InterruptedException {
+    private String latestKeyInHour(String prefix, String product) throws IOException, InterruptedException {
         String encodedPrefix = URLEncoder.encode(prefix, StandardCharsets.UTF_8);
         URI uri = URI.create(bucket + "?list-type=2&prefix=" + encodedPrefix);
 
@@ -101,10 +123,10 @@ public class GoesClient {
         }
 
         Document listing = parseListing(response.body());
-        return selectLatestKey(listing, prefix);
+        return selectLatestKey(listing, prefix, product);
     }
 
-    private String selectLatestKey(Document listing, String prefix) throws IOException {
+    private String selectLatestKey(Document listing, String prefix, String product) throws IOException {
         var truncation = listing.getElementsByTagNameNS("*", "IsTruncated");
 
         if (!"ListBucketResult".equals(listing.getDocumentElement().getLocalName())
@@ -118,7 +140,7 @@ public class GoesClient {
         for (int index = 0; index < keys.getLength(); index++) {
             String key = keys.item(index).getTextContent();
 
-            if (key.startsWith(prefix) && key.substring(prefix.length()).matches(FILE_PATTERN)
+            if (key.startsWith(prefix) && key.substring(prefix.length()).matches("OR_" + product + FILE_SUFFIX_PATTERN)
                     && (latest == null || key.compareTo(latest) > 0)) {
                 latest = key;
             }
@@ -146,6 +168,19 @@ public class GoesClient {
 
     /** Uses a temporary file since the parser needs random access; removes it after decoding */
     private CloudMask downloadMask(String key) throws IOException, InterruptedException {
+        Path file = downloadFile(key);
+
+        try {
+            return parser.parse(file);
+        } catch (IOException exception) {
+            throw new IOException("Decode " + key + ": " + exception.getMessage(), exception);
+        } finally {
+            Files.deleteIfExists(file);
+        }
+    }
+
+    /** Removes partial downloads on failure; the caller removes a completed file after parsing. */
+    private Path downloadFile(String key) throws IOException, InterruptedException {
         URI uri = bucket.resolve(key);
         Path file = Files.createTempFile("skyview-goes-", ".nc");
 
@@ -156,11 +191,10 @@ public class GoesClient {
                 throw new IOException("HTTP " + response.statusCode() + " from " + uri);
             }
 
-            return parser.parse(file);
-        } catch (IOException exception) {
-            throw new IOException("Download/decode " + key + ": " + exception.getMessage(), exception);
-        } finally {
+            return file;
+        } catch (IOException | InterruptedException exception) {
             Files.deleteIfExists(file);
+            throw exception;
         }
     }
 
