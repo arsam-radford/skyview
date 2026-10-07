@@ -63,7 +63,7 @@ public class HypatiaClient {
      * @param element chemical element to retrieve
      * @throws IllegalArgumentException if either argument is null or blank
      */
-    private static void validateArguments(String starIdentifier, String element) {
+    private void validateArguments(String starIdentifier, String element) {
 
         if (starIdentifier == null || starIdentifier.isBlank()) {
             throw new IllegalArgumentException(
@@ -83,7 +83,7 @@ public class HypatiaClient {
      * @param element chemical element to retrieve
      * @return URI for the Hypatia request
      */
-    private static URI buildUri(String starIdentifier, String element) {
+    private URI buildUri(String starIdentifier, String element) {
         String encodedName = URLEncoder.encode(
                 starIdentifier, StandardCharsets.UTF_8);
 
@@ -104,7 +104,7 @@ public class HypatiaClient {
      * @param response response received from Hypatia
      * @throws IOException if the response status is not successful
      */
-    private static void checkStatus(HttpResponse<String> response)
+    private void checkStatus(HttpResponse<String> response)
             throws IOException {
 
         int status = response.statusCode();
@@ -122,16 +122,20 @@ public class HypatiaClient {
      * @return parsed abundance measurements
      * @throws IOException if the response cannot be parsed
      */
-    private static List<ElementAbundance> parseResponse(String body)
+    private List<ElementAbundance> parseResponse(String body)
             throws IOException {
 
         try {
             Gson gson = new Gson();
             JsonArray results = gson.fromJson(body, JsonArray.class);
 
+            if (results == null) {
+                throw new IOException("Hypatia response must contain a JSON array.");
+            }
+
             return parseResults(results);
 
-        } catch (JsonParseException | IllegalStateException exception) {
+        } catch (JsonParseException | IllegalStateException | UnsupportedOperationException exception) {
             throw new IOException(
                     "Failed to parse Hypatia response.", exception);
         }
@@ -144,7 +148,7 @@ public class HypatiaClient {
      * @return list of parsed abundance measurements
      * @throws IOException if a result cannot be parsed
      */
-    private static List<ElementAbundance> parseResults(JsonArray results)
+    private List<ElementAbundance> parseResults(JsonArray results)
             throws IOException {
 
         List<ElementAbundance> abundances = new ArrayList<>();
@@ -168,7 +172,7 @@ public class HypatiaClient {
      * @param result result object returned by Hypatia
      * @return true if the result is marked as not found
      */
-    private static boolean isNotFound(JsonObject result) {
+    private boolean isNotFound(JsonObject result) {
         JsonElement name = result.get("name");
 
         return name != null
@@ -183,13 +187,13 @@ public class HypatiaClient {
      * @return parsed ElementAbundance object
      * @throws IOException if required fields are missing or invalid
      */
-    private static ElementAbundance parseAbundance(JsonObject result)
+    private ElementAbundance parseAbundance(JsonObject result)
             throws IOException {
 
         try {
-            String starName = result.get("name").getAsString();
-            String element = result.get("element").getAsString();
-            String solarNorm = result.get("solarnorm").getAsString();
+            String starName = readRequiredText(result, "name");
+            String element = readRequiredText(result, "element");
+            String solarNorm = readRequiredText(result, "solarnorm");
             Double median = parseMedianValue(result);
 
             return new ElementAbundance(
@@ -202,6 +206,17 @@ public class HypatiaClient {
         }
     }
 
+    /** Reads a required nonblank string without treating numbers as names. */
+    private String readRequiredText(JsonObject result, String field) throws IOException {
+        JsonElement value = result.get(field);
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()
+                || value.getAsString().isBlank()) {
+            throw new IOException("Hypatia missing or invalid required field: " + field);
+        }
+
+        return value.getAsString();
+    }
+
     /**
      * Reads the optional median abundance value from a result.
      *
@@ -209,7 +224,7 @@ public class HypatiaClient {
      * @return median abundance in dex, or null if unavailable
      * @throws IOException if the median value is invalid
      */
-    private static Double parseMedianValue(JsonObject result)
+    private Double parseMedianValue(JsonObject result)
             throws IOException {
 
         JsonElement median = result.get("median_value");
@@ -234,7 +249,7 @@ public class HypatiaClient {
      * @return parsed finite double value
      * @throws IOException if the value is malformed or not finite
      */
-    private static Double parseFiniteDouble(String text)
+    private Double parseFiniteDouble(String text)
             throws IOException {
 
         try {

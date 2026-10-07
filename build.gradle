@@ -33,7 +33,7 @@ tasks.register('checkSetup', JavaExec) {
     enableAssertions = true
 }
 
-/* Commands 
+/* Commands
 ./gradlew parserCheck
 ./gradlew check
  */

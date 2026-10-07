@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import org.skyview.goes.CloudCell;
 
 /** Coordinates the independent source demonstrations */
@@ -27,7 +28,7 @@ public class SkyviewApplication {
     private final GoesClient goesClient = new GoesClient();
 
     /**
-     * Calls each enabled source; uncomment your section while implementing it.
+     * Retrieves each source independently for the terminal demonstration.
      *
      * @throws InterruptedException if an enabled request is interrupted
      */
@@ -36,32 +37,34 @@ public class SkyviewApplication {
         System.out.printf("Radford observer: %.2f deg latitude, %.2f deg longitude, %.0f m elevation%n",
                 DEMO_OBSERVER.getLatitudeDegrees(), DEMO_OBSERVER.getLongitudeDegrees(), DEMO_OBSERVER.getElevationMeters());
 
-        // retrieveStars();
+        retrieveStars();
         retrieveSolarSystem();
-        // retrieveComposition();
+        retrieveComposition();
         retrieveCloudMask();
         retrieveCloudTopHeight();
-        System.out.println("\nRetrieval finished. Press Enter to fetch again.");
+        System.out.println("\nRetrieval finished | Press Enter to fetch again");
     }
 
     /**
-     * Displays available cloud-top geopotential height near Radford.
+     * Displays available cloud top geopotential height near Radford.
      * @throws InterruptedException if acquisition is interrupted
      */
     private void retrieveCloudTopHeight() throws InterruptedException {
-        System.out.println("\nNOAA GOES-19: downloading the latest CONUS cloud-top heights...");
+        System.out.println("\nNOAA GOES 19: downloading the latest CONUS cloud top heights");
         try {
             var heights = goesClient.fetchLatestCloudTopHeight();
             var cell = heights.getCellAt(DEMO_OBSERVER.getLatitudeDegrees(), DEMO_OBSERVER.getLongitudeDegrees());
             System.out.printf("Height scan %s to %s UTC, grid %s x %s%n",
                     heights.getScanStart(), heights.getScanEnd(), heights.getColumnCount(), heights.getRowCount());
-            System.out.printf("Scan age: %d min; height DQF: %s%n",
+            System.out.printf("Decoded %,d geographic height cells%n",
+                    (long) heights.getColumnCount() * heights.getRowCount());
+            System.out.printf("Scan age: %d min | height DQF: %s%n",
                     Duration.between(heights.getScanEnd(), Instant.now()).toMinutes(), cell.getQualityCode());
 
             if (cell.getHeightMeters() == null) {
-                System.out.println("Cloud-top height near Radford: unavailable (no good-quality retrieval).");
+                System.out.println("Cloud top height near Radford: unavailable (no good quality retrieval)");
             } else {
-                System.out.printf("Cloud-top geopotential height near Radford: %.0f m above sea level.%n", cell.getHeightMeters());
+                System.out.printf("Cloud top geopotential height near Radford: %.0f m above sea level%n", cell.getHeightMeters());
             }
         } catch (IOException | IllegalArgumentException exception) {
             System.out.println("GOES height: " + exception.getMessage());
@@ -73,14 +76,16 @@ public class SkyviewApplication {
      * @throws InterruptedException if acquisition is interrupted
      */
     private void retrieveCloudMask() throws InterruptedException {
-        System.out.println("\nNOAA GOES-19: downloading the latest CONUS cloud mask...");
+        System.out.println("\nNOAA GOES 19: downloading the latest CONUS cloud mask");
         try {
             var mask = goesClient.fetchLatestCloudMask();
             CloudCell cell = mask.getCellAt(DEMO_OBSERVER.getLatitudeDegrees(), DEMO_OBSERVER.getLongitudeDegrees());
-            System.out.printf("GOES-19: scan %s to %s UTC, grid %s x %s%n",
+            System.out.printf("GOES 19: scan %s to %s UTC, grid %s x %s%n",
                     mask.getScanStart(), mask.getScanEnd(), mask.getColumnCount(), mask.getRowCount());
-            System.out.printf("Scan age: %d min.%n", Duration.between(mask.getScanEnd(), Instant.now()).toMinutes());
-            System.out.printf("Radford geographic cloud state: %s; DQF: %s%n", cell.getState(), cell.getQualityCode());
+            System.out.printf("Decoded %,d geographic cloud mask cells%n",
+                    (long) mask.getColumnCount() * mask.getRowCount());
+            System.out.printf("Scan age: %d min%n", Duration.between(mask.getScanEnd(), Instant.now()).toMinutes());
+            System.out.printf("Radford geographic cloud state: %s | DQF: %s%n", cell.getState(), cell.getQualityCode());
             if (cell.getCloudProbability() == null) {
                 System.out.println("Cloud probability: unknown");
             } else {
@@ -93,11 +98,20 @@ public class SkyviewApplication {
 
     /** Displays the stars returned by the local catalog reader. */
     private void retrieveStars() {
+        System.out.println("\nHYG: reading the local development CSV");
         try {
-            for (Star star : starCatalog.loadStars(CATALOG_FILE, MAGNITUDE_LIMIT)) {
+            var stars = starCatalog.loadStars(CATALOG_FILE, MAGNITUDE_LIMIT);
+            System.out.printf("Loaded %d stars with apparent magnitude <= %s (J2000 coordinates)%n",
+                    stars.size(), MAGNITUDE_LIMIT);
+
+            for (Star star : stars) {
                 System.out.printf("%s: RA %s h, Dec %s deg, magnitude %s%n",
                         star.getDisplayName(), star.getRightAscensionHours(),
                         star.getDeclinationDegrees(), star.getApparentMagnitude());
+                System.out.printf("  HYG %s | HIP %s | HD %s | spectral type %s | color index %s%n",
+                        star.getHygId(), Objects.toString(star.getHipId(), "unknown"),
+                        Objects.toString(star.getHdId(), "unknown"), Objects.toString(star.getSpectralType(), "unknown"),
+                        Objects.toString(star.getColorIndex(), "unknown"));
             }
         } catch (IOException | IllegalArgumentException exception) {
             System.out.println("HYG: " + exception.getMessage());
@@ -111,10 +125,10 @@ public class SkyviewApplication {
      */
     private void retrieveSolarSystem() throws InterruptedException {
         Instant start = Instant.now();
-        System.out.printf("%nJPL Horizons: requesting Moon positions for the next %d minutes...%n", SAMPLE_WINDOW.toMinutes());
+        System.out.printf("%nJPL Horizons: requesting Moon positions for the next %d minutes%n", SAMPLE_WINDOW.toMinutes());
         try {
             var samples = horizonsClient.fetchPositions(MOON_ID, DEMO_OBSERVER, start, start.plus(SAMPLE_WINDOW), SAMPLE_INTERVAL);
-            System.out.printf("Received %d calculated positions. Azimuth: north = 0 deg, east = 90 deg.%n", samples.size());
+            System.out.printf("Received %d calculated positions | Azimuth: north = 0 deg, east = 90 deg%n", samples.size());
 
             for (PositionSample sample : samples) {
                 String horizon = "above horizon";
@@ -124,6 +138,9 @@ public class SkyviewApplication {
 
                 System.out.printf("Moon at %s (UTC): azimuth %.2f deg, altitude %+.2f deg (%s)%n",
                         sample.getTime(), sample.getAzimuthDegrees(), sample.getAltitudeDegrees(), horizon);
+                System.out.printf("  Body ID %s | apparent magnitude %s | illuminated disk (%%) %s%n",
+                        sample.getBodyId(), Objects.toString(sample.getApparentMagnitude(), "unknown"),
+                        Objects.toString(sample.getIlluminatedPercent(), "unknown"));
             }
         } catch (IOException | IllegalArgumentException exception) {
             System.out.println("Horizons: " + exception.getMessage());
@@ -136,11 +153,13 @@ public class SkyviewApplication {
      * @throws InterruptedException if the HTTP request is interrupted
      */
     private void retrieveComposition() throws InterruptedException {
+        System.out.println("\nHypatia: requesting calcium abundances for " + COMPOSITION_STAR);
         try {
             var measurements = hypatiaClient.fetchAbundances(COMPOSITION_STAR, COMPOSITION_ELEMENT);
+            System.out.printf("Abundance results received: %d%n", measurements.size());
 
             if (measurements.isEmpty()) {
-                System.out.println("Hypatia: no matching abundance measurements.");
+                System.out.println("Hypatia: no matching abundance measurements");
             }
 
             for (ElementAbundance measurement : measurements) {
