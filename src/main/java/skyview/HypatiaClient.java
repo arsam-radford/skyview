@@ -2,18 +2,31 @@ package skyview;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 
-/** Retrieves stellar elemental abundances from Hypatia using Gson */
+/** Retrieves stellar elemental abundances from Hypatia using Gson. */
 public class HypatiaClient {
+
+    private static final String SOLAR_NORM = "asplund09";
+    private static final Duration CONNECTION_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(CONNECTION_TIMEOUT).build();
+
     /**
      * Retrieves one element's measurements using the fixed asplund09 solar reference.
      *
@@ -24,46 +37,220 @@ public class HypatiaClient {
      * @throws InterruptedException if the HTTP request is interrupted
      * @throws IllegalArgumentException if an argument is null or invalid
      */
-
-    private static final String solarNorm = "asplund09";
-
-    public List<ElementAbundance> fetchAbundances(String starIdentifier, String element)
+    public List<ElementAbundance> fetchAbundances(
+            String starIdentifier, String element)
             throws IOException, InterruptedException {
-        // TODO: impl the Hypatia issue using the shared ElementAbundance class
-        
-        String hypatiaUrl = "https://hypatiacatalog.com/hypatia/api/v2/composition/" + "?name=" + starIdentifier + "&element=" + element + "&solarnorm=" + solarNorm;
 
-        HttpClient client = HttpClient.newBuilder().build();
+        validateArguments(starIdentifier, element);
 
-        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(hypatiaUrl)).GET().build();
+        URI uri = buildUri(starIdentifier, element);
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri).timeout(REQUEST_TIMEOUT).GET().build();
 
-        if (response.statusCode() != 200) {
-            throw new IOException("Hypatia returned HTTP status " + response.statusCode());
+        HttpResponse<String> response = HTTP_CLIENT.send(
+                request, HttpResponse.BodyHandlers.ofString());
+
+        checkStatus(response);
+
+        return parseResponse(response.body());
+    }
+
+    /**
+     * Checks that the star identifier and element are not null or blank.
+     *
+     * @param starIdentifier catalog identifier for the star
+     * @param element chemical element to retrieve
+     * @throws IllegalArgumentException if either argument is null or blank
+     */
+    private static void validateArguments(String starIdentifier, String element) {
+
+        if (starIdentifier == null || starIdentifier.isBlank()) {
+            throw new IllegalArgumentException(
+                    "starIdentifier must not be null or blank.");
         }
 
-        Gson gson = new Gson();
-        JsonArray results = gson.fromJson(response.body(), JsonArray.class);
+        if (element == null || element.isBlank()) {
+            throw new IllegalArgumentException(
+                    "element must not be null or blank.");
+        }
+    }
+
+    /**
+     * Builds the Hypatia composition API URI using encoded parameters.
+     *
+     * @param starIdentifier catalog identifier for the star
+     * @param element chemical element to retrieve
+     * @return URI for the Hypatia request
+     */
+    private static URI buildUri(String starIdentifier, String element) {
+        String encodedName = URLEncoder.encode(
+                starIdentifier, StandardCharsets.UTF_8);
+
+        String encodedElement = URLEncoder.encode(
+                element, StandardCharsets.UTF_8);
+
+        String url = "https://hypatiacatalog.com/hypatia/api/v2/composition/"
+                + "?name=" + encodedName
+                + "&element=" + encodedElement
+                + "&solarnorm=" + SOLAR_NORM;
+
+        return URI.create(url);
+    }
+
+    /**
+     * Checks that the HTTP response has a successful status code.
+     *
+     * @param response response received from Hypatia
+     * @throws IOException if the response status is not successful
+     */
+    private static void checkStatus(HttpResponse<String> response)
+            throws IOException {
+
+        int status = response.statusCode();
+
+        if (status < 200 || status >= 300) {
+            throw new IOException(
+                    "Hypatia returned HTTP status " + status);
+        }
+    }
+
+    /**
+     * Parses the Hypatia JSON response into abundance results.
+     *
+     * @param body JSON response body
+     * @return parsed abundance measurements
+     * @throws IOException if the response cannot be parsed
+     */
+    private static List<ElementAbundance> parseResponse(String body)
+            throws IOException {
+
+        try {
+            Gson gson = new Gson();
+            JsonArray results = gson.fromJson(body, JsonArray.class);
+
+            return parseResults(results);
+
+        } catch (JsonParseException | IllegalStateException exception) {
+            throw new IOException(
+                    "Failed to parse Hypatia response.", exception);
+        }
+    }
+
+    /**
+     * Converts each Hypatia result into an ElementAbundance object.
+     *
+     * @param results array of results returned by Hypatia
+     * @return list of parsed abundance measurements
+     * @throws IOException if a result cannot be parsed
+     */
+    private static List<ElementAbundance> parseResults(JsonArray results)
+            throws IOException {
 
         List<ElementAbundance> abundances = new ArrayList<>();
 
         for (int i = 0; i < results.size(); i++) {
             JsonObject result = results.get(i).getAsJsonObject();
 
-            String starName = result.get("name").getAsString();
+            if (isNotFound(result)) {
+                continue;
+            }
 
-            String resultElement = result.get("element").getAsString();
-
-            String solarNormalization = result.get("solarnorm").getAsString();
-
-            Double medianAbundance = result.get("median_value").getAsDouble();
-
-            ElementAbundance abundance = new ElementAbundance(starName, resultElement, solarNormalization, medianAbundance);
-            abundances.add(abundance);
+            abundances.add(parseAbundance(result));
         }
 
         return abundances;
     }
-}
 
+    /**
+     * Checks whether Hypatia reports that a star was not found.
+     *
+     * @param result result object returned by Hypatia
+     * @return true if the result is marked as not found
+     */
+    private static boolean isNotFound(JsonObject result) {
+        JsonElement name = result.get("name");
+
+        return name != null
+                && !name.isJsonNull()
+                && "not-found".equals(name.getAsString());
+    }
+
+    /**
+     * Converts one Hypatia result into an ElementAbundance object.
+     *
+     * @param result Hypatia result to parse
+     * @return parsed ElementAbundance object
+     * @throws IOException if required fields are missing or invalid
+     */
+    private static ElementAbundance parseAbundance(JsonObject result)
+            throws IOException {
+
+        try {
+            String starName = result.get("name").getAsString();
+            String element = result.get("element").getAsString();
+            String solarNorm = result.get("solarnorm").getAsString();
+            Double median = parseMedianValue(result);
+
+            return new ElementAbundance(
+                    starName, element, solarNorm, median);
+
+        } catch (NullPointerException | IllegalStateException exception) {
+            throw new IOException(
+                    "Hypatia response is missing required fields.",
+                    exception);
+        }
+    }
+
+    /**
+     * Reads the optional median abundance value from a result.
+     *
+     * @param result Hypatia result containing the median value
+     * @return median abundance in dex, or null if unavailable
+     * @throws IOException if the median value is invalid
+     */
+    private static Double parseMedianValue(JsonObject result)
+            throws IOException {
+
+        JsonElement median = result.get("median_value");
+
+        if (median == null || median.isJsonNull()) {
+            return null;
+        }
+
+        String text = median.getAsString();
+
+        if (text.isBlank()) {
+            return null;
+        }
+
+        return parseFiniteDouble(text);
+    }
+
+    /**
+     * Converts a median value to a finite double.
+     *
+     * @param text value to convert
+     * @return parsed finite double value
+     * @throws IOException if the value is malformed or not finite
+     */
+    private static Double parseFiniteDouble(String text)
+            throws IOException {
+
+        try {
+            double value = Double.parseDouble(text);
+
+            if (!Double.isFinite(value)) {
+                throw new IOException(
+                        "Hypatia returned non-finite median_value.");
+            }
+
+            return value;
+
+        } catch (NumberFormatException exception) {
+            throw new IOException(
+                    "Hypatia returned malformed median_value: " + text,
+                    exception);
+        }
+    }
+}
