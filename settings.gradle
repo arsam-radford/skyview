@@ -1,7 +1,1 @@
 rootProject.name = 'skyview'
-
-sourceControl {
-    gitRepository('https://github.com/arsam-radford/goes-cloud-parser.git') {
-        producesModule('org.skyview:goes-cloud-parser')
-    }
-}

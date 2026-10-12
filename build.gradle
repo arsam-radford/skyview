@@ -1,16 +1,20 @@
 plugins {
     id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+javafx {
+    version = '21.0.12'
+    modules = ['javafx.controls']
 }
 
 repositories {
     mavenCentral()
-    maven { url = 'https://artifacts.unidata.ucar.edu/repository/unidata-all/' }
 }
 
 dependencies {
     implementation 'org.apache.commons:commons-csv:1.14.1'
     implementation 'com.google.code.gson:gson:2.14.0'
-    implementation 'org.skyview:goes-cloud-parser:0.2.0'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -24,6 +28,16 @@ application {
 
 tasks.named('run') {
     standardInput = System.in
+}
+
+tasks.register('gui', JavaExec) {
+    dependsOn classes
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'skyview.SkyviewGuiDriver'
+    doFirst {
+        def javafxJars = classpath.filter { it.name.startsWith('javafx-') }
+        jvmArgs '--module-path', javafxJars.asPath, '--add-modules', 'javafx.controls'
+    }
 }
 
 tasks.register('checkSetup', JavaExec) {

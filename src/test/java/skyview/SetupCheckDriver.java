@@ -41,6 +41,7 @@ public class SetupCheckDriver {
             System.setOut(originalOutput);
         }
         assert output.toString(StandardCharsets.UTF_8).contains("Press Enter");
+        assert output.toString(StandardCharsets.UTF_8).contains("SSEC RealEarth");
         assert !output.toString(StandardCharsets.UTF_8).contains("Retrieving enabled");
         System.out.println("Setup check passed.");
     }
