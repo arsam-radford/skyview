@@ -1,5 +1,6 @@
 package skyview;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +26,23 @@ public class PositionStore {
      * @throws IllegalArgumentException if either argument is invalid
      */
     public PositionSample findNearest(String bodyId, Instant time) {
-        // TODO Nathaniel: compare sample times for this body without interpolation.
-        throw new UnsupportedOperationException("Position lookup task pending");
+        if (bodyId == null || bodyId.isBlank() || time == null) {
+            throw new IllegalArgumentException("Body identifier and time must be provided");
+        }
+
+        PositionSample nearest = null;
+        Duration nearestDistance = null;
+        for (PositionSample sample : samples) {
+            if (bodyId.equals(sample.getBodyId())) {
+                Duration distance = Duration.between(time, sample.getTime()).abs();
+                if (nearest == null || distance.compareTo(nearestDistance) < 0
+                        || (distance.compareTo(nearestDistance) == 0
+                        && sample.getTime().isBefore(nearest.getTime()))) {
+                    nearest = sample;
+                    nearestDistance = distance;
+                }
+            }
+        }
+        return nearest;
     }
 }
