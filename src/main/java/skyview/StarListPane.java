@@ -67,13 +67,35 @@ public class StarListPane extends VBox {
      * @param results non null stars in display order
      */
     public void showStars(List<Star> results) {
-        // TODO Noah: clear selection, replace rows, and display the result count.
-        message.setText("Star list task pending");
+    stars.getSelectionModel().clearSelection();
+    stars.getItems().setAll(results);
+    message.setText("Stars: " + results.size());
     }
+
 
     /** Reports valid filter input or displays an input error */
     private void applyFilter() {
-        // TODO Noah: read the fields, validate the number, and call window.filterStars.
-        message.setText("Filter input task pending");
+        final String magnitudeText = magnitude.getText();
+        if (magnitudeText == null || magnitudeText.isBlank()) {
+            message.setText("Magnitude field is empty");
+            return;
+        }
+
+        final double limit;
+        try {
+            limit = Double.parseDouble(magnitudeText.trim());
+        } catch (NumberFormatException exception) {
+            message.setText("Invalid magnitude: " + magnitudeText);
+            return;
+        }
+        if (!Double.isFinite(limit)) {
+            message.setText("Magnitude must be finite: " + magnitudeText);
+            return;
+        }
+
+        message.setText("");
+        window.filterStars(search.getText(), limit);
+
     }
+
 }
