@@ -2,6 +2,7 @@ package skyview;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /** Retains the catalog for repeated searches. */
 public class StarStore {
@@ -29,9 +30,29 @@ public class StarStore {
      * @param magnitudeLimit finite inclusive upper limit
      * @return a separate result list in catalog order
      * @throws IllegalArgumentException if the query is null or the limit is not finite
-     */
-    public List<Star> findStars(String query, double magnitudeLimit) {
-        // TODO Bryson: filter the stored list without changing it.
-        throw new UnsupportedOperationException("Star search task pending");
+     */    
+   public List<Star> findStars(String query, double magnitudeLimit) {
+        if (query == null) {
+            throw new IllegalArgumentException("query cannot be null");
+        }
+
+        if (!Double.isFinite(magnitudeLimit)) {
+            throw new IllegalArgumentException("magnitude limit must be a finite number");
+        }
+
+        String normalizedQuery = query.strip().toLowerCase(Locale.ROOT);
+        List<Star> matches = new ArrayList<>();
+
+        for (Star star : stars) {
+            boolean magnitudeMatch = star.getApparentMagnitude() <= magnitudeLimit;
+            String normalizedName = star.getDisplayName().toLowerCase(Locale.ROOT);
+            boolean nameMatch = normalizedQuery.isEmpty() || normalizedName.contains(normalizedQuery);
+
+            if (nameMatch && magnitudeMatch) {
+                matches.add(star);
+            }
+        }
+
+        return matches;
     }
 }
