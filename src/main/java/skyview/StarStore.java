@@ -32,32 +32,27 @@ public class StarStore {
      * @throws IllegalArgumentException if the query is null or the limit is not finite
      */    
    public List<Star> findStars(String query, double magnitudeLimit) {
+        if (query == null) {
+                throw new IllegalArgumentException("query cannot be null");
+            }
 
-    if (query == null) {
-        throw new IllegalArgumentException("query cannot be null");
+            if (!Double.isFinite(magnitudeLimit)) {
+                throw new IllegalArgumentException("magnitude limit must be a finite number");
+            }
+
+            String normalizedQuery = query.strip().toLowerCase(Locale.ROOT);
+            List<Star> matches = new ArrayList<>();
+
+            for (Star star : stars) {
+                boolean magnitudeMatch = star.getApparentMagnitude() <= magnitudeLimit;
+                String normalizedName = star.getDisplayName().toLowerCase(Locale.ROOT);
+                boolean nameMatch = normalizedQuery.isEmpty() || normalizedName.contains(normalizedQuery);
+
+                if (nameMatch && magnitudeMatch) {
+                    matches.add(star);
+                }
+            }
+
+            return matches;
     }
-
-    if (!Double.isFinite(magnitudeLimit)) {
-        throw new IllegalArgumentException("magnitude limit must be a finite number");
-    }
-
-    String normalizedQuery = query.strip().toLowerCase(Locale.ROOT);
-
-    List<Star> matches = new ArrayList<>();
-
-    for (Star star : stars) {
-
-        boolean magnitudeMatch = star.getApparentMagnitude() <= magnitudeLimit;
-
-        String normalizedName = star.getDisplayName().toLowerCase(Locale.ROOT);
-
-        boolean nameMatch = normalizedQuery.isEmpty() || normalizedName.contains(normalizedQuery);
-
-        if (nameMatch && magnitudeMatch) {
-            matches.add(star);
-        }
-    }
-
-    return matches;
-}
 }
