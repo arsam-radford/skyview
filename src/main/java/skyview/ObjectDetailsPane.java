@@ -1,6 +1,7 @@
 package skyview;
 
 import java.util.List;
+
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
@@ -33,12 +34,65 @@ public class ObjectDetailsPane extends VBox {
      * @param abundances non null results for this star
      */
     public void showStar(Star star, List<ElementAbundance> abundances) {
-        // TODO Seth: populate every label, including missing values and cleared selection.
-        name.setText("Select a star");
-        if (star != null) {
-            name.setText(star.getDisplayName());
+        if (star == null) {
+            name.setText("Select a star");
+            identifiers.setText("");
+            coordinates.setText("");
+            brightness.setText("");
+            spectrum.setText("");
+            composition.setText("");
+            return;
         }
 
-        composition.setText("Details task pending");
+        name.setText(star.getDisplayName());
+        identifiers.setText("HYG: " + star.getHygId()
+                + " | HIP: " + optionalValue(star.getHipId())
+                + " | HD: " + optionalValue(star.getHdId()));
+        coordinates.setText("J2000 RA: " + star.getRightAscensionHours() + " hours"
+                + " | Dec: " + star.getDeclinationDegrees() + " degrees");
+        brightness.setText("Apparent magnitude: " + star.getApparentMagnitude());
+        spectrum.setText("Spectral type: " + spectralType(star.getSpectralType())
+                + " | Color index (B-V): " + optionalValue(star.getColorIndex()));
+
+        if (abundances.isEmpty()) {
+            composition.setText("No composition measurements");
+        } else {
+            StringBuilder details = new StringBuilder("Composition:");
+            for (ElementAbundance abundance : abundances) {
+                String measuredValue;
+                if (abundance.getMedianAbundanceDex() == null) {
+                    measuredValue = "unknown";
+                } else {
+                    measuredValue = abundance.getMedianAbundanceDex() + " dex";
+                }
+
+                details.append("\n")
+                        .append(optionalValue(abundance.getElement()))
+                        .append(": ").append(measuredValue)
+                        .append(" (solar normalization: ")
+                        .append(optionalValue(abundance.getSolarNormalization()))
+                        .append(")");
+            }
+            composition.setText(details.toString());
+        }
+    }
+
+    /** Shows an unavailable optional value as unknown, preserving numeric zero. */
+    private String optionalValue(Object value) {
+        if (value == null) {
+            return "unknown";
+        } else {
+            return value.toString();
+        }
+    }
+
+    /** A blank spectral type is also unavailable. */
+    private String spectralType(String value) {
+        if (value == null || value.isBlank()) {
+            return "unknown";
+        } else {
+            return value;
+        }
     }
 }
+
