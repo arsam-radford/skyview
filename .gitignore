@@ -1,4 +1,8 @@
 /.gradle/
 /build/
 /bin/
+/data/hygdata_v41.csv
+/data/openngc.csv
+/data/openngc-addendum.csv
+/data/*.download
 docs/issues/

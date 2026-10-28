@@ -5,7 +5,7 @@ plugins {
 
 javafx {
     version = '21.0.12'
-    modules = ['javafx.controls']
+    modules = ['javafx.controls', 'javafx.swing']
 }
 
 repositories {
@@ -28,15 +28,60 @@ application {
 
 tasks.named('run') {
     standardInput = System.in
+    dependsOn 'downloadCatalogs'
+}
+
+def catalogSources = [
+    downloadHyg: [
+        path: 'data/hygdata_v41.csv',
+        url: 'https://raw.githubusercontent.com/astronexus/HYG-Database/c7f7f883fe678cc7680169a50ccd7dcc49b060ce/hyg/CURRENT/hygdata_v41.csv'
+    ],
+    downloadOpenNgc: [
+        path: 'data/openngc.csv',
+        url: 'https://raw.githubusercontent.com/mattiaverga/OpenNGC/be3cd6c5498806a2fbb2f7e0452ef802dbb02be0/database_files/NGC.csv'
+    ],
+    downloadOpenNgcAddendum: [
+        path: 'data/openngc-addendum.csv',
+        url: 'https://raw.githubusercontent.com/mattiaverga/OpenNGC/be3cd6c5498806a2fbb2f7e0452ef802dbb02be0/database_files/addendum.csv'
+    ]
+]
+
+catalogSources.each { taskName, source ->
+    tasks.register(taskName) {
+        outputs.file source.path
+        onlyIf { !file(source.path).isFile() }
+
+        doLast {
+            def destination = file(source.path)
+            def partial = file(source.path + '.download')
+            def connection = URI.create(source.url).toURL().openConnection()
+            connection.connectTimeout = 15000
+            connection.readTimeout = 60000
+
+            try {
+                connection.inputStream.withCloseable { input ->
+                    java.nio.file.Files.copy(input, partial.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                }
+
+                java.nio.file.Files.move(partial.toPath(), destination.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } finally {
+                java.nio.file.Files.deleteIfExists(partial.toPath())
+            }
+        }
+    }
+}
+
+tasks.register('downloadCatalogs') {
+    dependsOn catalogSources.keySet()
 }
 
 tasks.register('gui', JavaExec) {
-    dependsOn classes
+    dependsOn classes, 'downloadCatalogs'
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'skyview.SkyviewGuiDriver'
     doFirst {
         def javafxJars = classpath.filter { it.name.startsWith('javafx-') }
-        jvmArgs '--module-path', javafxJars.asPath, '--add-modules', 'javafx.controls'
+        jvmArgs '--module-path', javafxJars.asPath, '--add-modules', 'javafx.controls,javafx.swing'
     }
 }
 

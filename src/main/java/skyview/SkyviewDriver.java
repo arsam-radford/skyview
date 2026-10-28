@@ -5,7 +5,7 @@ import java.util.Scanner;
 /** Terminal entry point for demonstrating the data readers */
 public class SkyviewDriver {
     /**
-     * Retrieves enabled sources whenever Enter is pressed.
+     * Retrieves enabled sources whenever Enter is pressed
      *
      * @param args unused command-line arguments
      */
@@ -14,8 +14,8 @@ public class SkyviewDriver {
 
         try (Scanner input = new Scanner(System.in)) {
             System.out.println("Skyview live data demo");
-            System.out.println("HYG: local stars | Hypatia: stellar composition");
-            System.out.println("JPL Horizons: current Moon positions | SSEC RealEarth: geographic cloud texture");
+            System.out.println("HYG and OpenNGC: full local catalogs | Hypatia: stellar composition");
+            System.out.println("JPL Horizons: current solar system positions | SSEC RealEarth: geographic cloud texture");
             System.out.println("Press Enter to fetch data for Radford | Ctrl+C to exit");
             System.out.print("> ");
 

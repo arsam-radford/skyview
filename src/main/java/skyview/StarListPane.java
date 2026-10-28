@@ -14,9 +14,12 @@ public class StarListPane extends VBox {
     private static final double SPACING = 8;
 
     private final TextField search = new TextField();
-    private final TextField magnitude = new TextField("6.5");
-    private final ListView<Star> stars = new ListView<>();
-    private final Label message = new Label("Star list task pending");
+    private final TextField magnitude = new TextField();
+
+    // the window clears this selection when a deep sky object is selected
+    final ListView<Star> stars = new ListView<>();
+
+    private final Label message = new Label("Loading stars");
     private final SkyviewWindow window;
 
     /**
@@ -41,11 +44,13 @@ public class StarListPane extends VBox {
 
         final Label magnitudeLabel = new Label("Maximum magnitude");
         magnitudeLabel.setLabelFor(magnitude);
+        magnitude.setPromptText("Blank shows all catalog stars");
 
         getChildren().addAll(searchLabel, search, magnitudeLabel, magnitude, apply, message, stars);
         VBox.setVgrow(stars, Priority.ALWAYS);
     }
 
+    // sets the names shown in the star list
     private void configureList() {
         stars.setPlaceholder(new Label("No stars to show"));
 
@@ -67,17 +72,17 @@ public class StarListPane extends VBox {
      * @param results non null stars in display order
      */
     public void showStars(List<Star> results) {
-    stars.getSelectionModel().clearSelection();
-    stars.getItems().setAll(results);
-    message.setText("Stars: " + results.size());
+        stars.getSelectionModel().clearSelection();
+        stars.getItems().setAll(results);
+        message.setText("Stars: " + results.size());
     }
 
-
-    /** Reports valid filter input or displays an input error */
+    // reports valid filter input or displays an input error
     private void applyFilter() {
         final String magnitudeText = magnitude.getText();
-        if (magnitudeText == null || magnitudeText.isBlank()) {
-            message.setText("Magnitude field is empty");
+        if (magnitudeText.isBlank()) {
+            message.setText("");
+            window.filterStars(search.getText(), Double.MAX_VALUE);
             return;
         }
 
